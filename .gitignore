@@ -43,4 +43,7 @@ config.json
 .DS_Store
 
 #Environment Secrets
-.env
+#.env
+
+.idea/
+.iml
