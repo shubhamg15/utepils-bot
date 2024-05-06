@@ -1,8 +1,10 @@
 //Webex Bot Starter - featuring the webex-node-bot-framework - https://www.npmjs.com/package/webex-node-bot-framework
 require("dotenv").config();
+const axios = require('axios');
 var framework = require("webex-node-bot-framework");
 var webhook = require("webex-node-bot-framework/webhook");
 var express = require("express");
+const basicAuth = require('express-basic-auth');
 var bodyParser = require("body-parser");
 var app = express();
 app.use(bodyParser.json());
@@ -112,7 +114,7 @@ framework.hears(
   0
 );
 
-/* On mention with bot data 
+/* On mention with bot data
 ex User enters @botname 'space' phrase, the bot will provide details about that particular space
 */
 framework.hears(
@@ -134,7 +136,7 @@ framework.hears(
   0
 );
 
-/* 
+/*
    Say hi to every member in the space
    This demonstrates how developers can access the webex
    sdk to call any Webex API.  API Doc: https://webex.github.io/webex-js-sdk/api/
@@ -276,7 +278,7 @@ framework.hears(
 
 /* On mention with unexpected bot command
    Its a good practice is to gracefully handle unexpected input
-   Setting the priority to a higher number here ensures that other 
+   Setting the priority to a higher number here ensures that other
    handlers with lower priority will be called instead if there is another match
 */
 framework.hears(
@@ -297,11 +299,47 @@ framework.hears(
 
 //Server config & housekeeping
 // Health Check
+
+// Middleware for basic authentication
+app.use(basicAuth({
+  users: { 'admin': 'ynglinge' }, // Add your username and password
+  unauthorizedResponse: (req) => {
+    return 'Unauthorized';
+  }
+}));
+
 app.get("/", (req, res) => {
   res.send(`I'm alive.`);
 });
 
 app.post("/", webhook(framework));
+
+app.post("/xapi/webhook", (req, res) => {
+  const roomId = "dee182d0-8ab8-11ed-8502-03e8b930e670";
+  const token = "MjMxNWM2ZTctMjVjNC00MjlmLTlhMzAtMjM5MWEzNTM3OTI3MGMyYmJjYWYtMzhi_PF84_1eb65fdf-9643-417f-9974-ad72cae0e10f";
+  sendMessage(roomId, req.body, token);
+  res.send("OK");
+});
+
+async function sendMessage(roomId, message, accessToken) {
+  // Function to send a message to a Webex space
+  try {
+    const response = await axios.post('https://webexapis.com/v1/messages', {
+      roomId: roomId,
+      text: JSON.stringify(message)
+    }, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log("Message sent successfully!");
+    console.log(response.data);
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+}
 
 var server = app.listen(config.port, () => {
   framework.debug("framework listening on port %s", config.port);
